@@ -50,4 +50,20 @@ router.get('/imgsearch*', async (function (req, res) {
   }
 }))
 
+// find the most recent 10 searchs in the database
+router.get('/latest/imgsearch', async (function (req, res) {
+  try {
+    let recentSearches = await(RecentSearch.find({}).limit(10).sort({ time: -1}).lean().exec())
+    let modRecentSearches = recentSearches.map((search) => ({
+      searchTerm: search.searchTerm,
+      time: search.time
+    }))
+    res.send(modRecentSearches)
+
+  } catch(err) {
+    console.log(err)
+    return res.status(500).send({error: 'Sorry there a problem with our server. Please try agains later'})
+  }
+}))
+
 module.exports = router;

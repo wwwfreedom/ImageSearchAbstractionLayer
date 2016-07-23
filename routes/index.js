@@ -4,8 +4,10 @@ const imgurApiKey = `Client-ID ${process.env.IMGUR_API_KEY}`
 const RecentSearch = require('../models/recentImgSearch.js')
 const imgurUrl = 'https://api.imgur.com/3/gallery/search/'
 const axios = require('axios')
-var async = require('asyncawait/async')
-var await = require('asyncawait/await')
+const async = require('asyncawait/async')
+const await = require('asyncawait/await')
+const moment = require('moment')
+
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
@@ -38,10 +40,19 @@ router.get('/imgsearch*', async (function (req, res) {
     )
 
     // create and save the search term using RecentSearch model
-    const search = new RecentSearch({
-      searchTerm: searchTerm,
-      time: new Date().toString()
-    }).save()
+    // lesson: use utc for everything then convert to local timezone from there
+    // lesson: best to use mongoose createAt to sort by time
+    let search = new RecentSearch({
+      searchTerm: searchTerm
+    })
+
+    RecentSearch.on('index', function (err) {
+      if (err) {
+        console.error(err);
+      }
+    })
+    // lesson: either .catch() or wrap in await of a promise to make sure error is handle from the save() promise
+    await(search.save())
 
     res.send(images)
   } catch(err) {
@@ -53,10 +64,10 @@ router.get('/imgsearch*', async (function (req, res) {
 // find the most recent 10 searchs in the database
 router.get('/latest/imgsearch', async (function (req, res) {
   try {
-    let recentSearches = await(RecentSearch.find({}).limit(10).sort({ time: -1}).lean().exec())
+    let recentSearches = await(RecentSearch.find({}).limit(10).sort({ createdAt: -1}).lean().exec())
     let modRecentSearches = recentSearches.map((search) => ({
       searchTerm: search.searchTerm,
-      time: search.time
+      time_ago: moment(search.createdAt).fromNow()
     }))
     res.send(modRecentSearches)
 
